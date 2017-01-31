@@ -25,6 +25,16 @@
             "Description": "bucketname,bucketpath",
             "Type": "CommaDelimitedList"
         },
+        "functionName": {
+            "Default": "ssmS3LambdaSnsEmailNotifier",
+            "Description": "A unique name for your function",
+            "Type": "String"
+        },
+        "snsSubject": {
+            "Default": "AWS Windows Updates",
+            "Description": "SNS subject for the emails",
+            "Type": "String"
+        },
         "snsTopic": {
             "Default": "",
             "Description": "SNS topic ARN to which lambda outputs the logs",
@@ -57,8 +67,20 @@
                         ]
                     }
                 },
-                "FunctionName": "SsmLogsFromS3ToSnsLambda",
-                "Handler": "main.handler",
+                "Environment": {
+                    "Variables": {
+                        "sns_subject": {
+                            "Ref": "snsSubject"
+                        },
+                        "sns_topic": {
+                            "Ref": "snsTopic"
+                        }
+                    }
+                },
+                "FunctionName": {
+                    "Ref": "functionName"
+                },
+                "Handler": "main.lambda_handler",
                 "Role": {
                     "Fn::GetAtt": [
                         "lambdaSsmS3SnsAccessRole",
@@ -111,15 +133,7 @@
                                     ],
                                     "Effect": "Allow",
                                     "Resource": {
-                                        "Fn::Join": [
-                                            "",
-                                            [
-                                                "arn:aws:sns:",
-                                                {
-                                                    "Ref": "snsTopic"
-                                                }
-                                            ]
-                                        ]
+                                        "Ref": "snsTopic"
                                     }
                                 }
                             ],

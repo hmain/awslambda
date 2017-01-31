@@ -27,7 +27,14 @@ def lambda_handler(event, context):
     # Get the object from the event and get its content
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = urllib.unquote_plus(event['Records'][0]['s3']['object']['key'])
-    instance_id = "Instance ID:" + " " + key.split("/")[2]
+    try:
+        instance_id = "Instance ID:" + " " + key.split("/")[2]
+    except IndexError as e:
+        print(e)
+        print(
+            'Error getting Instance ID from document.'
+        )
+        instance_id = 'null'
     object = s3.Object(bucket, key)
     try:
         object_contents = object.get()["Body"].read().decode('utf-8')

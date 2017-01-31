@@ -1,4 +1,4 @@
-from troposphere import Template, Parameter, Ref, Select, GetAtt, Output, Join
+from troposphere import Template, Parameter, Ref, Select, GetAtt, Output, Join, AWS_REGION, AWS_ACCOUNT_ID
 import troposphere.awslambda as awslambda
 import troposphere.iam as iam
 t = Template()
@@ -11,12 +11,28 @@ lambda_code_package = t.add_parameter(Parameter(
     Default="s3bucketname,key",
     Description="bucketname,bucketpath",
 ))
+
+function_name = t.add_parameter(Parameter(
+    "functionName",
+    Default="ssmS3LambdaSnsEmailNotifier",
+    Type="String",
+    Description = "A unique name for your function"
+))
 sns_topic = t.add_parameter(Parameter(
     "snsTopic",
     Default="",
     Type="String",
     Description = "SNS topic ARN to which lambda outputs the logs"
 ))
+
+sns_subject = t.add_parameter(Parameter(
+    "snsSubject",
+    Default="AWS Windows Updates",
+    Type="String",
+    Description = "SNS subject for the emails"
+))
+
+
 ssm_s3_bucket = t.add_parameter(Parameter(
     "ssmS3Bucket",
     Default="ssmS3LogsToSNS",
@@ -66,7 +82,7 @@ role = t.add_resource(iam.Role(
                             "sns:Publish"
                         ],
                         "Effect": "Allow",
-                        "Resource": Join("",["arn:aws:sns:", Ref(sns_topic)])
+                        "Resource": Ref(sns_topic)
                     }
                 ]
             }
@@ -95,11 +111,18 @@ func = t.add_resource(awslambda.Function(
         S3Bucket=Select(0,Ref(lambda_code_package)),
         S3Key=Select(1,Ref(lambda_code_package))
     ),
-    FunctionName="SsmLogsFromS3ToSnsLambda",
-    Handler="main.handler",
+    FunctionName=Ref(function_name),
+    Handler="main.lambda_handler",
     Role=GetAtt(role,"Arn"),
     Runtime="python2.7",
     Timeout=300,
+    Environment=awslambda.Environment(
+            Variables={
+                "sns_topic": Ref(sns_topic),
+                "sns_subject": Ref(sns_subject)
+            }
+        )
+
 ))
 
 t.add_output(Output(
